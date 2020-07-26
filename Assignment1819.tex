@@ -1,0 +1,637 @@
+% !TeX spellcheck = en_GB
+\documentclass[a4paper,12pt]{article}
+\usepackage{algorithm}
+\usepackage{afterpage}
+\usepackage[noend]{algpseudocode}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{verbatim}
+\usepackage{float}
+\usepackage{latexsym}
+\usepackage{listings}
+\usepackage{color}
+\usepackage[inline]{enumitem}
+%\usepackage[portuges]{babel}
+%\usepackage[colorlinks,citecolor=magenta,urlcolor=blue,linkcolor=blue]{hyperref}
+
+%\pagestyle{myheadings}
+%\topmargin=-0.5cm                 
+%\textheight=24cmlit/thread/13116027
+\textwidth=16cm
+\oddsidemargin=0.5cm
+\evensidemargin=0.5cm
+
+\renewcommand\lstlistingname{}
+\renewcommand\lstlistlistingname{}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{notation}[theorem]{Notation}
+\def\proofname{\textbf{\upshape Proof}}
+%\newenvironment{proof}[1][Proof]{\textbf{#1.} }{ \rule{0.5em}{0.5em}}
+
+\newcommand\blankpage{%
+	\null
+	\thispagestyle{empty}%
+	\addtocounter{page}{-1}%
+	\newpage}
+
+\newcommand{\KK}{\mathbb{K}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\QQ}{\mathbb{Q}}
+\newcommand{\LM }{{\rm LM}}
+\newcommand{\LT }{{\rm LT}}
+\newcommand{\LC }{{\rm LC}}
+\newcommand{\mdeg}{{\rm multideg}}
+\newcommand{\LTId }{{\rm LTId}}
+\newcommand{\spanset}{\rm span}
+\newcommand{\ind}[2]{#1_1,#1_2,\ldots,#1_#2}
+\newcommand{\mi}[1]{\boldsymbol{#1}}
+\newcommand{\divides}{\mid}
+\newcommand{\notdivides}{\nmid}
+\newcommand{\vrty}{\textbf{V}}
+\newcommand{\idl}{\textbf{I}}
+\newcommand\frdiv[5]{%
+	\[
+	\renewcommand\arraystretch{1.5}
+	\begin{array}{l| l}
+	#1 & #2 \\
+	\cline{2-2}
+	#3 & #4 \\
+	\cline{1-1}
+	#5 & \\
+	\end{array}
+	\]
+}
+\DeclareMathOperator{\lcm}{lcm}
+
+\makeatletter
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\title{Algebraic Geometry and Algorithms}
+
+\author{Elvis Marques  \\ Joana Silva \\ Martim Costa  \\ João Ruben}
+
+\date{24/05/2019}
+\maketitle
+\begin{abstract}
+Gr\"obner bases are special sets of polynomials, which are useful to solve problems in many fields, they provide an algorithmic technique that solves a variety of problems. This paper is a very basic introduction to Gr\"obner Bases and assumes knowledge of linear algebra and introductory ring theory, but should also be of interest to those with prior knowledge of ideals and polynomial rings. The last section contains implementations of algorithms in Sagemath.
+\end{abstract}
+
+
+\section{Introduction}
+
+The objective of this paper is to show and exemplify some concepts that are useful for a better comprehension of Gr\"obner Bases of a finite ideal. 
+There are a lot of problems that motivate the introduction of Gr\"obner Basis, such that the ideal membership problem in subspaces $\KK[x_1, \ldots,x_n]$, i.e., given a polynomial decide if it belongs or not to an ideal of a ring of polynomials.
+Over the years, new concepts and results have developed in the area of Computer Algebra and computer algebraists made significant contributions to the fields of Mathematics and Computer Science. Among these contributions, an outstanding example is the theory and algorithms for Gr\"obner bases. 
+Gr\"obner Bases were first introduced in 1965 in Bruno Buchberger’s Ph.D. dissertation on performing algorithmic computations in residue classes of polynomial rings and are named after his advisor Wolfgang Gr\"obner. Their importance wasn’t fully realized for several years and the ideas presented here are applicable to any polynomial ring $\KK[x_1, \ldots, x_n]$ where $\KK$ is a field, and $I$ is an ideal of the ring $\KK[x_1, \ldots, x_n]$. The ring that will be used in examples is $\QQ[x, y, z]$, which is the set of all possible polynomials in the indeterminants $x$, $y$, and $z$ with rational coefficients. 
+
+Section two of this paper mostly reviews the elementary theory of polynomials over a field. Since we're focused on the computational aspect of algebra the main result here is the proof of the division theorem, which is constructive, providing an algorithm which serves as the foundation for the previously mentioned Buchberger's algorithm and thus much of the computational theory surrounding the topic of Gr\"obner bases. The third section introduces some concepts from algebraic geometry such as varieties, radical ideals, affine spaces and the Nullstellensatz, the latter of which will be useful in proving the two main results of the section. Finally particular computational applications of the theory are explored in the last section with the aid of SageMath.
+
+\section{The Algebra of Polynomials}
+Polynomials as algebraic entities are sequences with only finitely many non-zero elements called \textit{coefficients}. This formalism is introduced because polynomial functions, in general, are not uniquely determined by their corresponding coefficients. However, the theory developed in this assignment is concerned with infinite fields, a domain in which the familiar conception of a polynomial is sufficient. Nonetheless, for the sake of completion some basic definitions are presented.
+
+\begin{definition}
+A \textbf{monomial} in $x_1, \ldots, x_2$ is a product of the form $$x_1^{\alpha_1} \cdot x_2^{\alpha_2} \cdots x_n^{\alpha_n},$$
+	with $\alpha_1, \ldots, \alpha_n \in \NN$. The \textbf{total degree} of this monomial is defined to be $ |\alpha| = \sum_{i = 1}^{n}\alpha_i$.
+\end{definition} 
+\begin{notation}
+	Let $\alpha = (\alpha_1, \ldots , \alpha_n)$ we represent the aforementioned product as $$x^\alpha = x_1^{\alpha_1} \cdots x_n^{\alpha_n}.$$
+\end{notation}
+\begin{definition}
+	A \textbf{polynomial} $f$ in $x_1, \ldots, x_n$ with coefficients in a field $\KK$ is a finite linear combination of monomials with coefficients in $\KK$. Written as
+	$$
+	f = \sum_{\alpha}a_{\alpha}x^\alpha,$$
+	The set of all polynomials in $x_1, \ldots, x_n$ over a field $\KK$ will be denoted by $\KK[x_1, \ldots, x_n]$. Under intuitively defined operations of addition and multiplication, this structure forms commutative ring.
+\end{definition}
+\begin{example}
+	Show some polynomials and how they relate to the this notation
+\end{example}
+
+\begin{definition}
+	Let $f = \Sigma_\alpha a_\alpha x^\alpha \in \KK[x_1, \ldots, x_n]$.
+	\begin{itemize}
+	\item $a_\alpha$ is called the \textbf{coefficient} of the monomial $x^\alpha$.	\item If $a_\alpha \neq 0$, then we call $a_\alpha x^\alpha$ a \textbf{term} of $f$.
+	\item If $f \neq 0$ then $\deg(f) = \max\{ |\alpha| : a_\alpha \neq 0 \}$
+	\item If $f = 0$ then we define $\deg(f) = -\infty$
+	\end{itemize}
+\end{definition}
+
+\begin{theorem}\label{theo:deg}
+	Let $ f,g\in \KK[\ind{x}{n}] $ be non-zero polynomials. Then
+	\begin{enumerate}
+		\item $\deg (fg) = \deg(f) + \deg(g)$
+		\item If $ f + g \neq 0 $, then $ \deg(f+g) \leq \max\{\deg(f),\deg(g)\} $
+	\end{enumerate}
+\end{theorem}
+
+\begin{definition}
+	Given a field $\KK$ and $n \in \NN$, we define the n-dimensional \textbf{affine space} over $\KK$ to be the set
+	$$
+	\KK^n := \{ (a_1, \ldots, a_n) : a_1,\ldots, a_n \in \KK \}.
+	$$
+\end{definition}
+Given $(a_1, \ldots, a_n) \in \KK^n$ and $f \in \KK[x_1, \ldots, x_n]$, we can replace every $x_i$ by $a_i$ in the expression of $f$. Due to the multiplicative and additive closure of a field the resulting expression is an element of $\KK$. This defines the \textbf{polynomial function} of $f$.
+\begin{example}
+	Show example where different polynomials define the same function, mention the issue doesn't arise in infinite fields
+\end{example}
+
+\subsection{The Ideal Membership Problem}
+So far we've defined things quite generally, it's worthwhile considering $\KK[x]$ in order to fully appreciate the increase in complexity.
+
+In this section, as a motivation for the introduction of Gr\"obner bases, we will be discussing the \textbf{ideal membership problem}. Given polynomials $p_1, \ldots, p_n, g \in \KK[x_1, \ldots, x_n]$ and an ideal $I = (p_1, \ldots, p_n) \subseteq K[x_1, \ldots, x_n]$ how do we determine whether or not $g \in I$? It turns out that for $\KK[x]$ the solution is quite simple.
+
+\subsubsection{Division}
+In algebra it is proven that every ideal of $\ZZ$ is generated by a single integer, i.e., $\ZZ$ is a principal ideal domain. Usually this fact is proven through the use of the $\gcd$ which itself requires the division algorithm. It is then natural to wonder if the argument may be generalized. Note also that the ideal membership problem for ideals of $\ZZ$ is solved through the use of these properties. Given integers $a_1, \ldots, a_n$ and $g$, we ascertain $g \in I = (a_1, \ldots, a_n)$ by first computing $\gcd(a_1, \ldots, a_n)$ and checking if it is a divisor of $g$, if it is not then we conclude that $g \notin I$. In $\KK[x]$ the process is identical once the appropriate abstractions are introduced.
+
+\begin{proposition}
+	Let $\KK$ be a field and $p,g \in \KK[x]$ such that $g \neq 0$, then there exists unique polynomials $p,r \in \KK[x]$ such that $$ p = g\cdot q + r \text{ with } \deg(r) < \deg(p)$$
+	See \cite{Fer2019} for the proof.
+\end{proposition}
+The proof of this theorem gives us a division algorithm for polynomials in $K[x]$.
+\begin{example}
+	\[
+	\begin{tabular}{c|c} 
+	$ x^3 - 6x^2 -x +12 $ & $ x - 2 $ \\ \cline{2-2} \\
+	$ -x^3 + 2x^2 $ & $ x^2 - 4x - 9$ \\ \cline{1-1} \\
+	$ -4x^2 -x +12 $ & \\ \\
+	$ 4x^2 - 8x $ & \\ \cline{1-1} \\			
+	$ -9x + 12 $  & \\ \\
+	$ 9x - 18 $ & \\ \cline{1-1} \\
+	$ -6 $
+	\end{tabular}
+	\]
+	Here $p = (x-2)(x^2-4x-9)-6$, $q = x^2-4x-9$ and $r = -6$.
+\end{example}
+
+\subsubsection{Order}
+An examination of the division algorithm in $\KK[x]$ tells us that the notion of \textit{ordering of terms} in polynomials is essential, because the procedure relies on the ability to identify the leading term. No problems emerge for polynomials of a single indeterminate because the choice is clear, the leading term is simply defined to be the monomial with the largest exponent. But how would we order $f = xyz + yz^3$? We may choose by summing the exponents and decide that $\LT(f) = yz^3$ but we may also wish to prioritize the variable $x$ and instead have $\LT(f) = xyz$.
+\begin{definition}
+	A \textbf{monomial ordering} on $\KK[x_1, \ldots, x_n]$ is a relation is a relation > on $\ZZ_{\geq 0}^n$ satisfying:
+	\begin{enumerate}
+		\item > is a total ordering on $\ZZ_{\geq 0}^n$,
+		\item If $\alpha > \beta$ and $\gamma \in \ZZ_{\geq 0}^n$, then $\alpha + \gamma >  \beta + \gamma$,
+		\item If $A \subseteq \ZZ_{\geq 0}^n$ non-empty, then there exists $\alpha \in A$ such that $\beta > \alpha$ for every $\beta \neq \alpha$ in $A$.
+	\end{enumerate}
+\end{definition}
+
+Next we define the monomial ordering that'll be most frequently used throughout the assignment.
+
+\begin{definition}[Lexicographic Order]
+	Let $\alpha = (\alpha_1, \ldots, \alpha_n)$ and $\beta = (\beta_1, \ldots, \beta_n)$ both be elements of $\ZZ_{\geq 0}^n$. We say $\alpha >_\text{lex} \beta$ if the leftmost nonzero entry of the vector difference $\alpha - \beta$ is positive. We write $x^\alpha >_\text{lex} x^\beta$ if $\alpha >_\text{lex} \beta$.
+\end{definition}
+
+The proof that this is indeed a monomial ordering on $\ZZ_{\geq 0}^n$ is in \cite{CoxLittleOshea}.
+
+\begin{definition}
+	Let $f = \Sigma_\alpha a_\alpha x^\alpha$ be a non-zero polynomial in $\KK[x_1, \ldots, x_n]$ and let $>$ be a monomial order.
+	\begin{itemize}
+		\item $\mdeg(f) = \max(\alpha \in \ZZ_{\geq 0}^n : a_\alpha \neq 0)$, taken with respect to the fixed order.
+		\item  $\LC(f) = a_{\mdeg(f) \in \KK}$.
+		\item $\LM(f) = x^{\mdeg(f)}$.
+		\item  $\LT(f) = \LC(f)\cdot\LT(f)$.
+	\end{itemize}
+\end{definition}
+
+\begin{lemma}\label{l:mdeg}
+	Let $f, g \in \KK[x_1, \ldots, x_n]$ be non-zero polynomials. Then:
+	\begin{enumerate}
+		\item $\mdeg(f\cdot g) = \mdeg(f) + \mdeg(g)$.
+		\item If $f + g \neq 0$, then $\mdeg(f+g) \leq \max(\mdeg(f), \mdeg(g))$.
+		\item If $\mdeg(f) \neq \mdeg(g)$ and $f+g \neq 0$, then $$\mdeg(f+g) = \max(\mdeg(f), \mdeg(g)).$$
+	\end{enumerate}
+\end{lemma}
+
+\begin{theorem}[Division Theorem]\label{theo:algdivsaovariasindeterminadas}
+	Let $ \KK $ be a field and $ ( g_1,g_2, \ldots, g_k)  $ an ordered $ k $-tuple of polynomials in $ \KK[\ind{x}{n}] $. If we fix a monomial order in $ \KK[\ind{x}{n}]   $, then for any $ p\in \KK[\ind{x}{n}] $ there exist polynomials $ q_1,q_2, \ldots, q_k, r \in  \KK[\ind{x}{n}]$ such that 
+	\[
+	p=q_1g_1+q_2g_2+ \cdots+ q_kg_k+ r,
+	\]
+	where $ r=0 $ or  $ r $ is linear combination of monomials, with coefficients in $ \KK $, none of which is divisible by any of $ \LM(g_1), \LM (g_2),\ldots,\LM (g_k) $.
+\end{theorem}
+
+\begin{proof}
+	 Proving the following algorithm's correctness gives us a constructive proof of the theorem.
+	 \begin{algorithm}[H]
+	 	\caption{The Division Algorithm in $\KK[x_1, \ldots, x_n]$}\label{divisionalg}
+	 	\begin{algorithmic}[1]
+	 		\Procedure{DivAlgMultipleIndeterminates}{$f$, }
+	 		\BState \textbf{input:} $f_1, \ldots, f_s, f \in \KK[x_1, \ldots, x_n]$
+	 		\BState \textbf{output:} $ q_1, \ldots, q_s, r \in \KK[x_1, \ldots, x_n´]$
+	 		\State $q_1 \gets 0; q_2 \gets 0; \ldots; q_s \gets 0; r \gets 0 $
+	 		\State $p \gets f$
+	 		\While{$p \neq 0$}
+	 		\State $ i \gets 1$
+	 		\State \textit{divisionoccurred} $\gets$ false
+	 		\While{$i \leq s \textbf{ and } \textit{divisionoccurred} = false$ }
+	 		\If {$\LT(f_i) \divides \LT(p)$} 
+	 		\State $q_i \gets q_i + \LT(p)/\LT(f_i)$ 
+	 		\State $p \gets p - (\LT(p)/\LT(f_i))f_i$
+	 		\State \textit{divisionoccurred} $\gets$ true
+	 		\Else
+	 		\State $i \gets i + 1$
+	 		\EndIf
+	 		\EndWhile
+	 			 		\If{ \textit{divisionoccurred} = false}
+	 		\State $ r \gets r + \LT(p)$
+	 		\State $ p \gets p - \LT(p)$
+	 		\EndIf
+	 		
+	 		\EndWhile
+			\State \Return $q_1, \ldots, q_s, r$
+	 		\EndProcedure
+	 	\end{algorithmic}
+	 \end{algorithm}
+ For $g=0$ the algorithm is trivially correct and consequently so is the theorem. Considering then $g \neq 0$ observe the following. We may split the main \textbf{while} into two cases. The one where line 10's \textbf{if} condition is met at least once, and the case where it is never met. Restated:
+ 
+\begin{enumerate}
+	\item \textbf{Remainder Step:} This is the case when
+	$$\forall_{i \in \{1, \ldots, s\}}: \LT(f_i) \notdivides \LT(p).$$
+	\item \textbf{Division Step:} Which is the negation of the previous, i.e., $$\exists_{i \in \{1, \ldots, s\}} : \LT(f_i) \divides \LT(p).$$ 
+\end{enumerate}
+First we begin by showing that the equation 
+\begin{equation} \label{eq:1}
+	f = q_1 f_1 + \ldots + q_s f_s + p + r.
+\end{equation} 
+Suppose \eqref{eq:1} holds at one iteration of the loop, as previously established, either a remainder or division step has occurred. If the former is the case then the values of $p$ and $r$ will have changed, but their sum $p+r$ remains the same since $p + r = p(p - \LT(p))  + (r+\LT(p))$ and hence \eqref{eq:1} holds. On the other hand, if a division step has occurred, some $\LT (f_i)$ divides $\LT(p)$. The performed computations imply that $q_i f_i + p = (q_i + \LT(p)/\LT(f_i)) f_i + (p-(\LT(p)/\LT(f_i))f_i)$, and thus \eqref{eq:1} also holds in this case. Since for the first iteration \eqref{eq:1} clearly holds, induction implies it to be true at every iteration.
+
+
+\textbf{Observations:}
+\begin{enumerate}
+	\item The algorithm halts when $p = 0$, so if it does halt then \eqref{eq:1} becomes $$ f = q_1 f_1 + \ldots + q_s f_s + r.$$ 
+	\item The value of $r$ is only altered by adding to its previous state the leading term of whatever $p$ is in that stage of the computation.
+	\item The value of $r$ is only altered at all when we are dealing with a Remainder Step, that is when the condition $\LT(f_i) \notdivides \LT(p)$ is met, consequently it is of the form $$r = \sum_{g \in \mathcal{D}} \LT(g) = \sum_{g \in \mathcal{D}} \LC(g) \cdot \LM(g)$$
+	where $\mathcal{D} = \{ f_i : \LT(f_i) \notdivides \LT(p) \}$.
+\end{enumerate} 
+It remains only to prove the first observation, does this procedure always halt? 
+
+In a Remainder Step we assign $p$ the value $p' = p - \LT(p)$. Having $\mdeg(p') \geq \mdeg(p)$ would be a contradiction, proving that $\mdeg(p')$ is strictly less than $\mdeg(p)$. In a Division Step, $p$ is assigned the value 
+\begin{equation}
+	p' = p - \frac{\LT (p)}{\LT(f_i)}f_i \neq 0. 
+\footnote{When $p' = 0$ then the algorithm terminates.} \end{equation}
+
+By lemma \ref{l:mdeg} then $$\mdeg \Big(\frac{\LT (p)}{\LT(f_i)}f_i \Big ) = \frac{\mdeg( \LT (p))}{\mdeg (\LT(f_i))}\mdeg(f_i) = \mdeg(\LT (p)).$$
+
+Since the leading terms are the same, $\mdeg(p') < \mdeg(p)$. In conclusion, $\mdeg(p)$ decreases at every iteration of the main loop. Eventually it must reach $0$, meaning $p = 0$ and the algorithm halts.
+
+\end{proof}
+
+	\begin{example}
+	Let
+	$p = -x^2y^2+x^2y+y^4-y$,
+	$g_1 = xy-x$,
+	$g_2 = x^2-x$ and $g_3 = y^2-y $ be polynomials in $\KK[x,y,z]$ and fix $x >_{lex} y$. 
+	\[
+	\begin{tabular}{c|llll}
+	\multicolumn{1}{l|}{$ -x^2y^2-x^2+x^2y+y^4-y $} & \multicolumn{1}{l|}{$ xy-x $} & \multicolumn{1}{l|}{$ x^2-x $} & $ y^2-y $ & \\ \cline{2-4} \\
+	$ x^2y^2-x^2y $ & $ -xy $ & & $ y^2+y+1 $ & \\ \cline{1-1} \\
+	$ y^4-y $ & & & &  \\ \\
+	$ -y^2+y^3 $ & & & &  \\ \cline{1-1} \\
+	$ y^3-y $ & & & &  \\ \\
+	$  -y^3+y^2 $ & & & &  \\ \cline{1-1} \\
+	$ y^2-y $ & & & &  \\ \\
+	$ -y^2+y $ & & & &  \\ \cline{1-1} \\
+	0 & & & & 
+	\end{tabular}
+	\]
+	$ p $ is divisible by $ g_1, \; g_2, \; g_3 $ then, \\
+	$ -x^2y^2-x^2+x^2y+y^4-y = (xy-x)*(-xy) + (x^2-x)*0 + (y^2-y)*(y^2+y+1)  $ therefore, $ r(x)=0, \; q_1 = -xy, \; q_2 = 0, \; q_3 = y^2+y+1 $
+\end{example}
+\begin{example}
+	$ ordem \; lexical \; x > y \\ 
+	p = x^2-y; \\
+	g_1 = x^2y-x; \; g_2 = xy^2-x $ \\
+	Therefore we have, 
+	\[
+	\begin{tabular}{l|l|l}
+	$ x^2-y $ & $ x^2y-x $ & $ xy^2-x $ \\ \cline{2-3} 
+	\end{tabular}
+	\]
+	$ p $ is not divisible by $ g_1 $ and $ g_2 $ then, \\
+	$ x^2-y=(x^2y-x)*0 + (xy^2-x)*0 +x^2-y$ therefore, $ r(x)=x^2-y ,\; q_1=0,\; q_2=0 $
+\end{example}
+
+\begin{definition}
+	An ideal $I \subseteq \KK[x_1, \ldots, x_n]$ is a \textbf{monomial ideal} if there is a subset $A \subseteq \ZZ_{\geq 0}^n$ (possibly infinite) such that $I$ consists of all polynomials which are finite sums of the form $\sum_{\alpha \in A} h_\alpha x^\alpha$, where $h_\alpha \in \KK[x_1, \ldots, x_n]$. In this case, we write $I = (x^\alpha : \alpha \in A)$.
+\end{definition}
+
+\begin{lemma}\label{l:mid1}
+	Let $I = (x^\alpha : \alpha \in A)$ be a monomial ideal. Then a monomial $x^\beta$ is in $I$, if and only if, $x^\beta \divides x^\alpha$ for some $\alpha \in A$.
+\end{lemma}
+
+\begin{definition}
+	Let $I \subseteq \KK[x_1, \ldots, x_n]$ be an ideal other than $\{0\}$, and fix a monomial ordering. Then:
+	\begin{enumerate}
+		\item We define $\LT(I) = \{cx^\alpha = \LT(f): f \in I \setminus \{0\} \}$,
+		\item and $\LTId(I) = (\LT(I))$, called the \textbf{leading term ideal}.
+	\end{enumerate}
+\end{definition}
+\begin{definition}
+	Fix a monomial order on $\KK[x_1, \ldots, x_n]$. A finite subset $G = \{g_1, \ldots, g_t\}$ of the ideal $\{0\} \neq I \subseteq \KK[x_1, \ldots, x_n]$ is said to be a \textbf{Gr\"obner basis} if $$ (\LT(g_1), \ldots, \LT(g_t)) = \LTId(I).$$
+\end{definition}
+\begin{proposition}\label{p1:iso}
+	The $I \subset \KK[x_1, \ldots, x_n]$ be an ideal. Then $\KK[x_1, \ldots, x_n]/I$ is isomorphic as a $\KK$-vector space to $S = \spanset(x^\alpha : x^\alpha \notin \LTId(I))$.
+\end{proposition}
+\begin{proof}
+	See Proposition 4 of section 3 in chapter 5 of \cite{CoxLittleOshea}.
+\end{proof}
+\section{Algebraic Geometry}
+
+\subsection{Affine Varieties}
+\begin{definition}
+	Let $\KK$ be a field and $f_1, \ldots, f_s \in \KK[x_1, \ldots, x_n]$. We define $$
+	V(f_1, \ldots, f_s) := \{ (a_1, \ldots, a_n) \in \KK^n : f_i(a_1, \ldots, a_n) = 0 \wedge 1 \leq i \leq s \},
+	$$
+	and say that $	V(f_1, \ldots, f_s)$ is the \textbf{affine variety} defined by $f_1, \ldots, f_s$.
+\end{definition}
+
+\begin{example}
+	content...
+\end{example}
+
+\begin{theorem}[Hilbert's Nullstellensatz - Strong version]
+	Let $ \KK $ be an algebraically closed field and $ g,g_1,\ldots,g_s\in  \KK[x_1,\ldots,x_n]$. Then $ g\in I(V(g_1,\ldots,g_s)) $ if and only if 
+	\[
+	g^m\in (g_1,\ldots,g_s)
+	\]
+	for some integer $ m\geq 1 $.
+\end{theorem}
+\begin{proof}
+	See Theorem 2 in section 1 of chapter 4 in \cite{CoxLittleOshea}.
+\end{proof}
+
+\begin{definition}
+	An ideal $I$ is \textbf{radical} if $f^m \in I$ for some integer $m \geq 1$ implies that $f \in I$.
+\end{definition}
+
+\begin{definition}
+	Let $I \subseteq \KK[x_1, \ldots, x_n]$ be an ideal. The \textbf{radical} of $I$, denoted $\sqrt{I}$, is the set $$ \{f : f^m \in I \text{ for some integer } m \geq 1 \}$$
+\end{definition}
+
+\begin{definition}
+	Let $I \subseteq \KK[x_1, \ldots, x_n]$ be an ideal, and let $f,g \in \KK[x_1, \ldots, x_n]$. We say $f$ and $g$ are \textbf{congruent modulo} $I$, written $$ f \equiv g \mod I,$$ if $f-g\in I$.
+\end{definition}
+\begin{example}
+	$I = (x^2-y^2, x+y^3+1) \subseteq \KK[x,y]$, then $f = x^4-y^4+x$ and $g=x+x^5+x^4y^3+x^4$ are congruent modulo $I$ since
+	\begin{equation*}
+	\begin{split}
+	f-g & = x^4 -y^4 - x^5-x^4y^3-x^4 \\
+	& = (x^2-y^4)(x^2-y^2)-(x^4)(x+y^3+1) \in I
+	\end{split}
+	\end{equation*}
+\end{example}
+Importantly the congruence relation forms an equivalence relation on $\KK[x_1, \ldots, x_n]$. Hence we can talk about the equivalence class of any $f \in \KK[x_1, \ldots, x_n]$, denoted as $$ [f] = \{g \in \KK[x_1, \ldots, x_n] : g \equiv f \mod I\}. $$
+
+\begin{definition}
+	The \textbf{quotient} of $\KK[x_1, \ldots, x_n]$ modulo $I$. written $\KK[x_1, \ldots, x_n]/I$, is the set of equivalence classes for congruence modulo $I$: 
+	$$\KK[x_1, \ldots, x_n]/I = \{[f] : f \in \KK[x_1, \ldots, x_n]\}.$$
+\end{definition}
+\begin{example}
+	Let $n\ZZ$ be an ideal of $\ZZ$. Note that $a,b \in \ZZ \Rightarrow a-b\in n \ZZ \Leftrightarrow n \divides a-b \Leftrightarrow a \equiv b \mod n$. Therefore, $\ZZ/n \ZZ = \ZZ_n = \{\bar 0, \bar 1, \ldots , \overline{n-1} \} = \{0 + n \ZZ, 1 + n \ZZ, \ldots, (n-1) + n \ZZ \}$.
+\end{example}
+\begin{theorem}\label{theo:finitedimensionalquotientrings}
+	Fix a monomial ordering in $ \CC[x_1,\ldots,x_n] $ and let $ I $ be an ideal of $ \CC[x_1,\ldots,x_n]$. Then the following statements are equivalent:
+	\begin{enumerate}[label=(\roman*)]
+		\item The affine variety $V = \vrty(I) $ is a finite set.
+		\item For each $ i $, $ 1\leq i \leq n $, there is some $ m_i\geq 0 $ such that $ x_i^{m_i}\in \LTId (I) $.
+		\item Let $ G $ be a Gr\"obner basis for $ I $. Then  for each $ i $, $ 1\leq i \leq n $, there is some $ m_i\geq 0 $ such that $ x_i^{m_i}=\LM (g) $ for some $ g\in G $.
+		\item The $ \CC $-vector space generated by all the monomials $ x^{\mi{\alpha}}$ such that $ x^{\mi{\alpha}} \notin \LTId (I)   $ is finite-dimensional.
+		\item The $ \CC $-vector space $ \CC[x_1,\ldots,x_n]/I $ is finite-dimensional.
+	\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+	(i) $\Rightarrow$ (ii): If $V = \emptyset$ the Weak Nullstellensatz tells us $I = \CC[x_1, \ldots, x_n]$, it follows that $1 \in I$. Fix $m_i = 0$ for every $i$, then $x_i^0 = 1 \in \LTId(I)$. Assume $\#V = m \in \NN$, then we list all $m$ elements $e_1, \ldots, e_m \in V \subset \CC^n$ (we can do this since every finite set is countable). For a fixed $i$ we can construct the following one-variable polynomial:
+	$$ f(x_i) = \prod_{j=1}^{m} (x_i - a_j),$$
+where $a_j$ is the $j$-th coordinate of $e_j = (a_1, \ldots, a_n)$. $f$ vanishes at every point of $V$, so $f \in \idl(V)$. By the Nullstellensatz, there is some $N \geq 1$ such that $f^N \in I$. This implies that $\LM(f^N) \in \LTId(I)$. Repeated application of the distributive property shows that $\LM(f^N)=x_i^{Nm} \in \LTId(I)$.
+
+
+(ii) $\Leftrightarrow$ (iii) Let $x_i^{m_i} \in \LTId(I)$ and $G$ be a Gr\"obner basis of $I$, by definition we have that $\LTId(I) = (\LT(g) : g \in G)$, and thus $x_i^{m_i} \in (\LT(g) : g \in G)$, which is a monomial ideal. By Lemma \ref{l:mid1}, there exists a $g$ such that $\LT(g) \divides x_i^{m_i} \Rightarrow \LM(g) \divides x_i^{m_i}$, hence $\LM(g)$ is a power of $x_i$ (by Lemma \ref{l:mdeg}). The opposite implication follows directly from the definition of $\LTId(I)$ since $G \subseteq I$.
+
+
+(ii) $\Leftrightarrow$ (iv)
+If $x_i^{m_i} \in \LTId(I)$ for each $i$, then the monomials $x_1^{\alpha_1} \cdots x_n^{\alpha_n}$ for which some $\alpha_i \geq m_i$ are all in $\LTId(I)$. The monomials in the complement of $\LTId(I)$ must have $0 \leq a_i \leq m-1$ for each $i$. As a result, the number of monomials in the complement of $\LTId(I)$ is at most $m_1 \cdot m_2 \cdots m_n$. For the opposite implication assume that the complement consists of $N < \infty$ monomials. Then, for each $i$, at least one of the $N+1$ monomials $1, x_i, x_i^2, \ldots, x_i^N$ must lie in $\LTId(I)$.
+
+(iv) $\Leftrightarrow$ (v) Follows directly from Proposition \ref{p1:iso}.
+
+
+(v) $\Rightarrow$ (i)
+To show that $V$ is finite, it suffices to show that for each $i$ there can be only finitely many distinct i-th coordinates for the points of $V$. Fix $i$ and consider the classes $[x_i^j]$ in $\CC[x_1,\ldots,x_n]/I$, where $j=0,1,2,\ldots$. Since $\CC[x_1,\ldots, x_n]/I$ is finite-dimensional, the $[x_i^j]$ must be linearly dependent in $\CC[x_1,\ldots,x_n]/I$. Thus, there exist constants $c_j$ (not all zero) and some $m$ such that $$ \sum_{j=0}^{m} c_j[x_i^j] = \Big[ \sum_{j=0}^{m} c_jx_i^j \Big] =  [0].$$
+However, this implies that $\sum_{j=0}^{m} c_jx_i^j \in I$. Since a nonzero polynomial can have only finitely many roots in $\CC$, this shows that the points of $V$ have only finitely many $i$-th coordinates.
+\end{proof}
+
+\begin{theorem}\label{theo:numberofpoints}
+	Let $ I $ be an ideal of $ \CC[x_1,\ldots,x_n]$ such that $ V(I) $ is a finite set. Then 
+	\begin{enumerate}[label=(\roman*)]
+		\item The number of points in $ V(I) $ is at most $ \dim \left( \CC[x_1,\ldots,x_n]/I\right)  $.
+		\item If $ I $ is a radical ideal, the number of points in $ V(I) $ is exactly $ \dim \left( \CC[x_1,\ldots,x_n]/I\right)  $.
+	\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We first show that given distinct points $p_1, \ldots, p_n \in \CC^n$, there is a polynomial $f_1 \in \CC[x_1, \ldots, x_n]$ with $f_1(p_1) = 1$ and $f_1(p_2) = \cdot = f_1(p_m) = 0$. To prove this, note that if $a\neq b \in \CC^n$, then they must differ at some coordinate, say the $j$-th, and it follows that $g = (x_j - b_j)/(a_j - b_j)$ satisfies $g(a) = 1, g(b) = 0$. If we apply this observation to each pair $p_1 \neq p_i$, $i \geq 2$, we get polynomials $g_i$ such that $g_i(p_i) = 1$ and $g_i(p_i) = 0$ for $i \geq 2$. Then $f_1 = g_2 \cdot g_3 \cdots g_m$ in turn, we get polynomials $f_1, \ldots, f_m$ such that $f_i(p_i) = 1$ and $f_i(p_j) = 0$ for $i \neq j$.
+
+Now we can prove the proposition. Suppose that $V = \{p_1, \ldots, p_m\}$, where the $p_i$ are distinct. Then we get $f_1, \ldots, f_m$ as above. If we can prove that $[f_1], \ldots, [f_m] \in \CC[x_1, \ldots, x_n]/I$ are linearly independent, then:
+\begin{equation}\label{eq:dim}
+	m \leq \dim(\CC[x_1, \ldots, x_n]/I)
+\end{equation}
+will follow, and the first part of the proposition will be proved.
+To prove linear independence, suppose that $\sum_{i=1}^{m} a_i[f_i] = [0]$ in $\CC[x_1, \ldots, x_n]/I$, where $a_i \in \CC$. Back in $\CC[x_1, \ldots, x_n]$, this means that $g = \sum_{i=1}^{m}a_if_i \in I$, so that $g$ vanishes at all points of $V = \{p_1, \ldots, p_m\}$. Then, for $1 \leq j \leq m$, we have 
+$$ 
+0 = g(p_j)= \sum_{i=1}^{m} a_i f_i(p_j) = 0 + a_j f_j (p_j) = a_j,
+$$
+and linear independence follows.
+
+Finally, suppose that $I$ is radical. To prove that equality holds in \ref{eq:dim}, it suffices to show that $[f_1], \ldots, [f_m]$ form a basis of $\CC[x_1, \ldots, x_n]/I$. Since we just proved linear independence, we only need to show that they span. Thus, let $[g] \in \CC[x_1, \ldots, x_n]/I$ be arbitrary, and set $a_i = g(p_i)$. Then consider $h = g - \sum_{i=1}^{m}a_i f_i$. One easily computes $h(p_j) = 0$ for all $j$, so that $h \in \idl(V)$. By the Nullstellensatz, $\idl(V) = \idl(\vrty(I)) = \sqrt{I}$ since $\CC$ is algebraically closed, and since $I$ is radical, we conclude that $h \in I$. Thus $[h] = [0]$ in $\CC[x_1, \ldots, x_n]/I$, which implies $[g] = \sum_{i=1}^{m} a_i[f_i]$. Completing the proof.  
+\end{proof}
+
+\section{Computational Applications}
+The following are implementations of Buchberger's Algorithm and an algorithm for reducing a Gr\"obner basis in SageMath. These depend on the functions \textbf{spoly} and \textbf{multpolydiv} which were provided by professor Jorge Nélio, the only other dependency is the package \textbf{itertools} which is included in any standard python distribution.
+
+\begin{lstlisting}[language=Python, caption={Buchberger's Algorithm}]
+def buchberger(polys, ring):
+	G = polys
+	while True:
+		Gp = G
+		for i in itertools.combinations(Gp, 2):
+			q, r = multpolydiv(spoly(i[0],i[1], ring), G)
+			if r != 0:
+				G += [r]
+		if G == Gp:
+			break
+	return G
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption=Algorithm for reducing a Gr\"obner Basis]
+def reduce_basis(basis):
+	reduced_basis = []
+	for poly in basis:
+		if poly.lc() == 1:
+			reduced_basis += [poly]
+		else:
+			reduced_basis += [poly.lc()^(-1) * poly]
+	return reduced_basis
+\end{lstlisting}
+\begin{example}
+	Consider the ideal in $\QQ[x,y]$
+	$$ I = (2x^2-xy+2y^2-2, x^2-xy+y^2-1).$$
+	In order to compute a Gr\"obner basis for $I$, with lexicographic order $x > y$, we will use Buchberger's algorithm.
+	First, we consider the set \begin{equation*}
+		\begin{split}
+		G & =\{ g_1, g_2\} \\
+		& = \{2x^2-xy+2y^2-2, x^2-xy+y^2-1\},
+		\end{split}
+	\end{equation*}
+	and proceed to calculate $\lcm(\LM(g_1), \LM(g_2)) = \lcm(x^2, x^2) = x^2.$ The next step is to calculate the s-polynomial of $g_1$ and $g_2$.
+	\begin{equation*}
+		\begin{split}
+		S(g_1, g_2) &= \frac{x^2}{2x^2}(2x^2-xy+2y^2-2)-\frac{x^2}{x^2} (x^2-xy+y^2-1) \\
+		& = x^2 - \frac{xy}{2} + y^2 - 1 - x^2+ xy - y^2 +1 \\
+		& = \frac{xy}{2}.
+		\end{split}
+	\end{equation*}
+	Now, using the generalized division algorithm, we perform a division of $\frac{xy}{2}$ by $(g_1, g_2)$. 
+	\begin{center}
+			\begin{tabular}{l|l|l}
+			$ \frac{xy}{2} $ & $ 2x^2-xy+2y^2-2$ & $ x^2-xy+y^2-1$ \\ \cline{2-3} 
+		\end{tabular}
+	\end{center}
+The output of the algorithm would then be $q_1 = 0, q_2 = 0$ and $r = x^2-y \neq 0$, since $ r \neq 0$ we "add it to $G$" obtaining a new set $G_1 = G \cup \{r\}$. Now the process repeats, for $G_1$. We begin by computing the s-poly of $g_1$ and $g_3$. $\lcm(\LM(g_1), \LM(g_3)) = x^2y$, thus
+\begin{equation*}
+	\begin{split}
+	S(g_1, g_3) & = \frac{x^2y}{2x^2} (2x^2-xy+2y^2-2) - \frac{x^2y}{\frac{xy}{2}}(\frac{xy}{2}) \\
+	& = x^2y - \frac{xy^2}{2} + \frac{2y^3}{2} - y - x^2y \\
+	& = - \frac{xy^2}{2} + y^3 - y.
+	\end{split}
+\end{equation*}
+Division algorithm:
+\[
+\begin{tabular}{c|llll}
+\multicolumn{1}{l|}{$ -\frac{xy^2}{2} + y^3 - y $} & \multicolumn{1}{l|}{$ 2x^2-xy+2y^2-2$} & \multicolumn{1}{l|}{$ x^2-xy+y^2-1 $} & $ \frac{xy}{2}$ & \\ \cline{2-4} \\
+$ \frac{xy^2}{2} $ & & & $ -y $ & \\ \cline{1-1} \\
+$ y^3-y $ & & & &  \\
+\end{tabular}
+\]
+So, $r = y^3-y \neq 0$. The algorithm now repeats for $G_2 = G_1 \cup \{y^3-y\}$.
+Skipping intermediate calculations: $\lcm(\LM(g_1, g_4)) = \lcm(x^2, y^3) = x^2y^3$.
+$S(g_1, g_4) = x^2y - \frac{xy^4}{2}+ y^5 - y^3$. On dividing $S(g_1, g_4)$ by $G_2$, we get a remainder equal to zero. The same happens when we divide $S(g_2, g_3)$ by $G_2$ and when we divide $S(g_2, g_4)$ by $G_2$. Since $S(g_1, g_3) = 0\cdot g_1 + 0 \cdot g_2 + 0 \cdot g_3 + 4$, all remainders are equal to zero. The algorithm stops and we conclude that $G_2 = \{2x^2-xy+2y^2-z, x^2-xy+y^2-1, \frac{xy}{2}, y^3-y \}$ is a Gro\"obner basis for $I$. By definition then, $\LTId(I) = (2x^2, x^2, \frac{xy}{2}, y^3)$. The exponent vectors of the generators of $\LTId(I)$ are:
+	\begin{equation*}
+	\alpha(1) = (2,0),\\
+	\alpha(2) = (1,1),\\
+	\alpha(3) = (0,3).
+	\end{equation*}
+	Hence, the elements of 
+	$$ \big( (2,0) + \ZZ_{\geq 0}^2 \big) \cup \big((1,1) + \ZZ_{\geq 0}^2\big) \cup \big((0,3)+ \ZZ_{\geq 0}^2\big) $$
+	
+	are the exponents vectors of monomials in $\LTId(I)$, which can be represented by diagrams that we saw in class.
+	As shown in \cite{CoxLittleOshea} the basis for the vector space $\QQ[x,y]/I$ is the set of the monomials which are not divisible by the monomials of $\LTId(I)$. Thus, $\{1,x,y,y^2\}$ is a basis for the vector space $\QQ[x,y]/I$.
+	\\
+	\textbf{Multiplication Table for the elements in the basis:}
+	In order to complete the multiplication table for the basis elements, we need to divide the usual product by the Gr\"obner basis. 
+	\begin{center}
+		\begin{tabular}{c|c|c|c|c|}
+			$\times$ & $1$ & $x$ & $y$ & $y^2$ \\
+			\hline
+			$1$ & $1$ & $x$ & $0$ & $0$ \\ 
+			\hline
+			$x$ & $x$ & $-y^2+1$ & $0$ & $0$ \\ 
+			\hline
+			$y$ & $y$ & $0$ & $y^2$ & $y$ \\ 
+			\hline
+			$y^2$ & $y^2$ & $0$ & $y$ & $y^2$ \\ 
+			\hline
+		\end{tabular}
+	\end{center}
+	Dividing $x^2$ by $(2x^2-xy+2y^2-2, x^2-xy+y^2-1, \frac{xy}{2}, y^3-y)$ gives a remainder equal to $-y^2+1$ which is a linear combination of the elements of the basis. 
+\end{example}
+\begin{example}
+	If $(p_1, \ldots, p_n )\subseteq \KK[x_1, \ldots, x_n]$ an ideal, then $\vrty(I) = \vrty(p_1, \ldots, p_n)$. Let $I = (x^2-xz+y^2, y^2+z^2-1, x^2-z^2+1)$, its reduced Gr\"obner basis with lex ordering $x > y > z$ is
+	$$ G = \{x^2-xz+y^2, y^2-z^2-1, x^2-z^2+1, -xz, -z^3-z\}.$$
+	Thus solving the system:
+	\begin{align*}
+	x^2-xz+y^2 &= 0 \\ 
+	y^2-z^2-1 &= 0 \\ 
+	x^2-z^2+1 &= 0 \\
+	-xz &= 0 \\
+	-z^3-z &= 0 
+	\end{align*}
+	is an equivalent problem to the initially stated. In $\QQ^3$, the solutions are $(0,0,1) , (0,0,-1)$. \\
+	In $\CC^3$, the solutions are $(0,0,1), (0,0,-1), (i,1,0),(-i,-1,0)$. The number of solutions in $\QQ^n$ will always be less than or equal to the number of solutions in $\CC^n$ since any solution in $\QQ^n$ is also a solution in $\CC^n$.\\
+	To compute the dimension of $\CC[x,y,z]/I$ we look at its $\LTId$ which is equal to $(x^2, y^2, -xz, z^3)$, then a basis for the vector space is $\{1,x,y,z,z^2\} \Rightarrow \dim(\CC[x,y,z]/I) = 5$. Note that both in $\CC^3$ and $\QQ^3$ the number of solutions is strictly less than $\dim(\CC[x,y,z]/I) = 5$.
+\end{example}
+\begin{example}
+    Let's consider $ V(I)= V(2x^2-xy+2y^2-2,x^2-xy+y^2-1) $ and observe the following sage math program:
+    \begin{verbatim}
+        
+    sage: R.<x,y> = QQ[]
+    sage: J=R.ideal(2*x^2-x*y+2*y^2-2,x^2-x*y+y^2-1)
+    sage: J 
+    Ideal (2*x^2 - x*y + 2*y^2 - 2, x^2 - x*y + y^2 - 1) $ of Multivariate
+    Polynomial Ring in x, y over Rational Field 
+    sage: J.dimension() 
+    0 
+    sage: J.variety() 
+    [{y: 0, x: 1}, {y: 0, x: -1}, {y: 1, x: 0}, {y: -1, x: 0}]
+    \end{verbatim}
+    With this we can verify that $ V(I) $ is a non-empty subset of $ \QQ^2$.
+    Now, in $ \CC^2 $ we have:
+    \begin{verbatim}
+    sage: R.<x,y> = QQ[]
+    sage: J=R.ideal(2*x^2-x*y+2*y^2-2,x^2-x*y+y^2-1)
+    sage: J
+    Ideal (2.0*x^2 - x*y + 2.0*y^2 - 2.0, x^2 - x*y + y^2 - 1.0) of Multivariate 
+    Polynomial Ring in x, y over Complex Field with 53 bits of precision
+    Field
+    sage: J.dimension()
+    0
+    sage: J.variety()
+    [{y: 0.0, x: -1.0}, {y: 0.0, x: 1.0}, {y: 1.0, x: 0.0}, {y: -1.0, x: 0.0}]
+    \end{verbatim}
+    Whit this we can conclude that $ V(I) $ hate at most 4 elements in $ \CC^2 $ such as in $ \QQ^2 $, as we have seen before.
+\end{example}
+\begin{thebibliography}{1}
+\bibitem{CoxLittleOshea} Cox, D., Little, J. \& O'Shea, D.,  \emph{Ideals, Varieties, and Algorithms: An Introduction to Computational Algebraic Geometry and  Commutative Algebra}, 3rd Edition, Springer-Verlag,  2006. 
+	
+\bibitem{Fer2019}Ferreira, Jorge N.M., \emph{Lecture Notes for Computational Algebra}, Universidade da Madeira, 2019
+\end{thebibliography}
+
+\end{document}
